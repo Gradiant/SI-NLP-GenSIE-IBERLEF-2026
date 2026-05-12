@@ -17,7 +17,7 @@ strategies ={
 
 def generate_plan(task):
     schema = task.target_schema
-    # print("Required fields:", schema.get("required", []))
+    # #print("Required fields:", schema.get("required", []))
     fields_by_cat = {}
     for field in schema.get("properties", []):
         types = get_types(field, schema)
@@ -27,7 +27,7 @@ def generate_plan(task):
     plan =[]
 
     for cat, fields in fields_by_cat.items():
-        # print(f"Category: {cat}, Fields: {fields}")
+        # #print(f"Category: {cat}, Fields: {fields}")
         fields_are_required = any(f in schema.get("required", []) for f in fields)
         strategy = strategies.get(cat, Direct)(llm=None)
         strategy.estimate(task, fields)
