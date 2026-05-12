@@ -1042,7 +1042,7 @@ Salida:
         
         )
 
-        print (f"Drafts {len(draft_list)}")
+        #print (f"Drafts {len(draft_list)}")
         
         draft_serial = "INTENTO:\n\n" + "INTENTO:\n\n".join([
             json.dumps(draft, indent=2) for draft in draft_list])        
@@ -1175,8 +1175,8 @@ Salida:
         # Monkey patch input_text
         task.input_text = f"Texto original del que se deben extraer las entidades: {task.input_text} \n Análsis del texto para ayudarte en la extracción: \n Texto etiquetado {response_text_sub} \n Analisis {response_text_analysis}"
 
-        print ("============ Task input Text  ==============")
-        print (task.input_text)
+        #print ("============ Task input Text  ==============")
+        #print (task.input_text)
 
 
     def run(self, task: Task, model: str) -> Dict[str, Any]:
@@ -1303,7 +1303,7 @@ Salida:
         for i in range(NUM_REPETIONS_EXTRACTION):
         
             if self._time_left(reserve=30) > 0:
-                print ("Another attempt")
+                #print ("Another attempt")
             
                 result = self._call_llm(
                     model,
