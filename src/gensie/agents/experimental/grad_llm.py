@@ -56,50 +56,7 @@ class GradLLM:
         )
         return result
 
-    def get_hints(self, task, fields, labels, properties, prev_hints):
 
-        task_description = task.target_schema.get("description", "").split("Complexity")[0].strip()
-        hints_system = self.prompts.get("hints_with_text_system", "").format(
-            descripcion=task_description,
-            instruction=task.instruction,
-        )
-        hints_user = self.prompts.get("hints_with_text_user", "").format(
-            hints=prev_hints,
-            fields=fields,
-            labels=labels,
-            properties=properties,
-            input_text = task.input_text,
-        )
-
-        hints = self.call_llm(
-            user_prompt=hints_user,
-            system_prompt=hints_system,
-            temperature=0.2,
-        )
-        print("Hint corregido",hints)
-        return hints
-
-    def get_hints_blind(self, task, fields, labels, properties):
-
-        task_description = task.target_schema.get("description", "").split("Complexity")[0].strip()
-        hints_system = self.prompts.get("hints_system", "").format(
-            descripcion=task_description,
-            instruction=task.instruction,
-        )
-        hints_user = self.prompts.get("hints_user", "").format(
-            fields=fields,
-            labels=labels,
-            properties=properties,
-            # input_text = task.instruction,
-        )
-
-        hints = self.call_llm(
-            user_prompt=hints_user,
-            system_prompt=hints_system,
-            temperature=0.9,
-        )
-        print("Hint ciego",hints)
-        return hints
 
     def get_candidates(self, task, plain_schema, input_text):
 
@@ -118,41 +75,8 @@ class GradLLM:
             system_prompt=hints_system,
             temperature=0.9,
         )
-        print("Candidates",candidates)
+        #print("Candidates",candidates)
         return candidates
-
-    def tag_text(self, task: Task, labels, properties, input_text) -> str:
-        tag_system = self.prompts.get("tag_system", "")
-
-        print("LABELS",labels)
-        if not labels:
-            labels = "ANSWER"
-
-        tag_user = self.prompts.get("tag_user", "").format(
-            input_text=input_text,
-            labels=labels,
-            task_instruction = task.instruction,
-            properties = properties
-        )
-        max_tokens = max(250, len(task.input_text.split()) * 5) +2000
-        num_ctx = max(250,len(task.input_text.split()) * 2) + 1000
-
-        print("Max tokens for tagging:", max_tokens)
-        tagged_text = self.call_llm(
-            user_prompt=tag_user,
-            system_prompt=tag_system,
-            max_tokens=max_tokens,
-            num_ctx=num_ctx,
-        )
-        if not isinstance(tagged_text, str):
-            print("Warning: tag_text did not return a string, falling back to original text")
-            return task.input_text
-        return tagged_text
-
-
-
-
-
 
     def call_llm(
         self,
@@ -182,12 +106,14 @@ class GradLLM:
             # max_tokens=max_tokens,
             temperature=temperature,
             seed=seed,
+            reasoning_effort= None,
+            max_tokens=2000,
             # extra_body={
             #     "num_ctx": num_ctx
             # },
             response_format=None if not use_schema else {"type": "json_object"} if not force_schema else force_schema
         )
-        print("Token usage:", response.usage)
+        #print("Token usage:", response.usage)
         # Placeholder response parsing — replace with actual parsing logic
         try:
             content = response.choices[0].message.content
@@ -213,6 +139,6 @@ class GradLLM:
                                 return json.loads(m.group())
                             except json.JSONDecodeError:
                                 pass
-                    print(f"Warning: call_llm could not parse JSON. Content preview: {content[:200]}")
+                    #print(f"Warning: call_llm could not parse JSON. Content preview: {content[:200]}")
             return {}
 
