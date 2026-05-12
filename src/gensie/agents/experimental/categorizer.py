@@ -182,7 +182,7 @@ def get_schema_to_field_plain(fields: list[str], schema) -> str:
 
     for field in fields:
         if field not in props:
-            print(f"Field {field} not found in schema")
+            #print(f"Field {field} not found in schema")
             continue
         body = props[field]
         desc = body.get("description", "")
@@ -203,7 +203,7 @@ def fit_schema_to_fields(fields: List[str], schema) -> str:
     lines = []
     for field in fields:
         if field not in props:
-            print(f"Field {field} not found in schema")
+            #print(f"Field {field} not found in schema")
             continue
         body = props[field]
         ts_type = _body_to_ts(body, defs, indent=2)

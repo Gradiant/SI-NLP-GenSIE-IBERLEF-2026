@@ -39,21 +39,21 @@ class ExperimentalAgent(GenSIEAgent):
 
         # 1. generate plan
         plan = generate_plan(task)
-        print("Time generating plan:", time.time() - self.initial_time)
+        #print("Time generating plan:", time.time() - self.initial_time)
 
-        print("Processing plan for: ", ",".join([f"{step.get('category')}({step.get('fields', [])})" for step in plan]))
+        #print("Processing plan for: ", ",".join([f"{step.get('category')}({step.get('fields', [])})" for step in plan]))
         # TEMP: test direct strategy on all tasks
         # 2. execute strategies
         results = []
 
         for step in plan:
-            print("PROCESSING", step.get("category"), step.get("fields", []))
+            #print("PROCESSING", step.get("category"), step.get("fields", []))
             init = time.time()
             strategy = step.get("strategy", None)
             strategy.use_model(self.llm)
             result = strategy.execute(in_time=self.MAX_TIME - (time.time() - self.initial_time))
             results.append(result)
-            print(f"Step {step.get('category')}, Execution Time:", time.time() - init)
+            #print(f"Step {step.get('category')}, Execution Time:", time.time() - init)
 
         # 3. join results
         init = time.time()
@@ -61,5 +61,5 @@ class ExperimentalAgent(GenSIEAgent):
         for res in results:
             final_result.update(res)
 
-        print("Time joining results:", time.time() - init)
+        #print("Time joining results:", time.time() - init)
         return final_result

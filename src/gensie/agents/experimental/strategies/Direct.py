@@ -1,8 +1,8 @@
-from .Strategy import StrategyV2
+from typing import Any, Dict
+
 from ..categorizer import fit_schema_to_fields
 from ..corector import correct_in_text
-
-from typing import Dict, Any
+from .Strategy import StrategyV2
 
 
 class Direct(StrategyV2):
@@ -31,7 +31,7 @@ class Direct(StrategyV2):
         )
 
         if not result:
-            print("Usando llamada directa")
+            #print("Usando llamada directa")
             result = self.llm.direct_call(self.task, seed=43, temperature=0.3)
 
         result = correct_in_text(result, self.task.input_text, schema=self.task.target_schema)

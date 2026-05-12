@@ -296,7 +296,7 @@ def _deduplicate(matches: list[Match], top_k: int) -> list[Match]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print(f"Backend activo: {_BACKEND}\n")
+    #print(f"Backend activo: {_BACKEND}\n")
 
     TEXT = """
     La película fue distribuida por Warner en exclusiva para cines europeos.
@@ -315,15 +315,17 @@ if __name__ == "__main__":
 
     sep = "─" * 60
     for query, descripcion in casos:
-        print(sep)
-        print(f"  Query      : «{query}»  ({descripcion})")
+        #print(sep)
+        #print(f"  Query      : «{query}»  ({descripcion})")
         top = find_top_spans(query, TEXT, top_k=3, min_score=0.3)
         if top:
             for m in top:
-                print(f"  {m}")
+                pass
+                #print(f"  {m}")
         else:
-            print("  (sin resultados por encima del umbral)")
-    print(sep)
+            pass
+            #print("  (sin resultados por encima del umbral)")
+    #print(sep)
 
 
 def correct_in_text(
