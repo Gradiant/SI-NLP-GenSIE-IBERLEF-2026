@@ -81,8 +81,8 @@ class OfficialParticipant(Participant):
 
     def get_info(self) -> ParticipantInfo:
         return ParticipantInfo(
-            team_name="GenSIE Baseline Team",
-            institution="Official",
+            team_name="Gradiant NLP Team",
+            institution="Gradiant",
             pipelines=[
                 PipelineInfo(
                     name="baseline",
@@ -90,11 +90,33 @@ class OfficialParticipant(Participant):
                 ),
                 PipelineInfo(
                     name="stable",
-                    description="Stable agent using predefined strategies.",
+                    description="""
+ This is a structured multi-stage inference pipeline that decomposes extraction into sequential SLM calls:
+- Guideline Stage: produces extraction guidelines taking the text and schema as input without performing extraction
+- Text Markup Stage: selects the entities in the text using the analysis guidelines without performing extraction)
+- Self-consistent Stage extraction: it obtains the extraction using the guidelines and the text markup (repeated N times under a fixed time budget of the first 30 seconds)
+- Final answer: it consolidates the final answer synthesizing from the previous answers
+"""
+
                 ),
                 PipelineInfo(
                     name="experimental",
-                    description="Experimental agent with advanced features.",
+                    description="""
+This is a experimental pipeline that plans and executes strategies based on categorization.
+
+- The categorization is done taking into account the field types and clasify the fields in next categories: direct, categorial, soft_entities, fixed_entities and complex.
+
+- The strategies are executed and also they have an estimated time to implement abetter planning in future implementations.
+
+- Direct and categorial categories use the same strategy: direct call to de llm.
+
+- Soft entities and fixed entities use also the same strategy: a direct prompt with diferent prompt than the previous one.
+
+- Complex category use a two step strategy: first get candidates for the fields and then make a direct call with the candidates as hints.
+
+- Finally each result is merged in a final result that is returned as output.
+
+""",
                 ),
             ],
         )

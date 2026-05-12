@@ -388,6 +388,10 @@ Recibirás:
 
 """
 
+
+NUM_REPETIONS_EXTRACTION = 4
+
+
 def _decompose_schema(schema: Dict[str, Any]) -> List[Tuple[str, Dict[str, Any]]]:
     """
     Split a (strict-mode) schema into one minimal sub-schema per top-level field.
@@ -968,7 +972,7 @@ class StableAgent(GenSIEAgent):
     def _verification_pass(
         self,
         model: str,
-        draft: Dict[str, Any],
+        draft_list: List[Dict[str, Any]],
         strict_schema: Dict[str, Any],
         text: str,
         instruction: str,
@@ -990,65 +994,111 @@ class StableAgent(GenSIEAgent):
         system_prompt = (
             """
 
-Eres un asistente especializado en validación y corrección de extracciones de información basadas en texto.
+Eres un asistente que valida y combina extracciones de información en formato JSON.
 
-Tu tarea consiste en revisar una extracción previa en formato JSON y verificar, campo por campo, si los valores extraídos están correcta y explícitamente fundamentados en el texto original.
+Entrada:
+- Un texto original
+- Varias extracciones JSON del mismo texto
 
-Regla general:
-- Todo campo que NO sea un campo libre debe aparecer en el texto original de forma explícita y con la misma redacción o significado inequívoco.
-- Si un valor no aparece en el texto, es incorrecto, está incompleto o mal formulado, debes corregirlo para que se ajuste exactamente a la información presente en el texto.
-- No debes inferir ni completar información que no esté claramente justificada por el texto.
-- Revisa los tipos de las entidades, modifica aquellas donde la asignación no se hizo correctamente
-- Cuando hablamos de que debe aparecer literalmente en el texto es que no puede haber ninguna otra palabra entre medias. Si esto ocurre incluye solo las partes del texto consecutivo que están relacionados con la entidad que se quiere extraer.
+Tarea:
+Generar una única extracción JSON corregida y combinada.
 
-Excepción:
-- Los campos definidos como “campos libres” pueden no aparecer literalmente en el texto (por ejemplo, preguntas generadas a partir del contenido). En estos casos, solo debes comprobar que el valor sea coherente con el texto, no que aparezca explícitamente.
+Proceso (obligatorio seguir estos pasos):
 
-Tu salida debe ser exclusivamente el objeto JSON corregido, manteniendo el mismo esquema que la extracción original.
+Paso 1. Validación de cada campo
+Para cada campo de cada extracción:
+- Comprueba si el valor aparece en el texto original.
 
+Reglas:
+- Un valor es válido SOLO si aparece explícitamente en el texto.
+- Debe coincidir exactamente o ser un fragmento consecutivo del texto.
+- No puede haber palabras intermedias dentro del fragmento usado.
+- Si no aparece → eliminar o corregir.
+
+Paso 2. Corrección
+- Sustituye valores incorrectos por el fragmento exacto del texto.
+- Si no existe un valor correcto → deja el campo vacío o elimínalo.
+
+Paso 3. Tipos
+- Corrige el tipo de cada campo si es incorrecto.
+
+Paso 4. Combinación
+- Combina las extracciones en una sola:
+  - No duplicar valores
+  - Mantener un único valor por campo (si aplica)
+  - Priorizar valores válidos sobre inválidos
+
+Paso 5. Campos libres
+- No necesitan aparecer literalmente en el texto
+- Solo deben ser coherentes con el contenido
+
+Salida:
+- Devuelve SOLO un JSON válido
+- Mismo esquema que las entradas
+- Sin texto adicional
+            
+            
             """
-
+        
         )
 
-
+        print (f"Drafts {len(draft_list)}")
+        
+        draft_serial = "INTENTO:\n\n" + "INTENTO:\n\n".join([
+            json.dumps(draft, indent=2) for draft in draft_list])        
+        
         prompt = (
-            f"Instrucción original: {instruction}\n\n"
-            f"Schema con las entidades que se solicitan extraer:\n{json.dumps(strict_schema, indent=2)}\n\n"
-            f"Texto:\n{text}\n\n"
-            f"Extracción del sistema en el paso anterior:\n{json.dumps(draft, indent=2)}\n\n"
-            f"Revisa cada campo extraido por el sistema . "
-            f"Fix any value that is incorrect or not grounded in the text. "
-            f"Devuelve el objeto JSON original "
-        )
-
-
-        prompt = (
-           f"""
-
+            f"""
 Instrucción original:
 {instruction}
 
-Esquema estricto con las entidades que debían extraerse:
+Esquema de salida (obligatorio respetar exactamente):
 {json.dumps(strict_schema, indent=2)}
 
-Texto original del que debía realizarse la extracción:
+Texto original:
 {text}
 
-Resultado de la extracción realizada en el paso anterior:
-{json.dumps(draft, indent=2)}
+Extracciones previas (varios intentos):
+{draft_serial}
 
 Tarea:
-Revisa cuidadosamente cada campo del JSON extraído y verifica si su valor está correctamente fundamentado en el texto original.
+Generar un único JSON final validado y combinado.
 
-- Si un valor es correcto y aparece claramente en el texto, mantenlo tal como está.
-- Si un valor es incorrecto, impreciso o no está respaldado por el texto, corrígelo para que coincida con la información real del texto.
-- Si el campo es un campo libre, comprueba únicamente su coherencia con el contenido del texto.
+Proceso (seguir en orden):
 
-Devuelve exclusivamente el objeto JSON final corregido, respetando exactamente la misma estructura.
+Paso 1. Validación
+Para cada campo en cada intento:
+- El valor es válido SOLO si aparece en el texto original.
+- Debe coincidir como un fragmento consecutivo del texto.
+- No puede haber palabras intermedias dentro del fragmento.
+- Si no cumple estas reglas → el valor es inválido.
 
-            """
-        )
+Paso 2. Selección de valores
+Para cada campo:
+- Si hay varios valores válidos → seleccionar el más completo o específico
+- Ignorar valores inválidos
+- Si no hay ningún valor válido → dejar el campo vacío o no incluirlo
 
+Paso 3. Corrección
+- Ajustar los valores para que coincidan exactamente con el texto original
+
+Paso 4. Combinación
+- Combinar la información de los distintos intentos
+- No duplicar valores
+- Mantener un único valor por campo (salvo listas definidas en el esquema)
+
+Paso 5. Campos libres
+- No necesitan aparecer literalmente en el texto
+- Solo deben ser coherentes con el contenido
+
+Salida:
+- Devuelve SOLO un JSON válido
+- Sin explicaciones
+- Sin texto adicional
+- Mismo esquema exacto que el definido arriba
+        
+        """)
+        
         result = self._call_llm(model, prompt, strict_schema, system_prompt)
 
         if result.get("error"):
@@ -1056,10 +1106,10 @@ Devuelve exclusivamente el objeto JSON final corregido, respetando exactamente l
 
         else:
             print ("Everything ok")
-
-        return result if not result.get("error") else draft
-
-    # ── Entry point ─────────────────────────────────────────────────────────
+        
+        return result if not result.get("error") else draft_list[0]
+        
+    # ── Entry point ─────────────────────────────────────────────────────────        
 
     def _normalize_text(self, task: Task, full_schema: Dict[str, Any], model: str):
         """ Re-structures the input text to simplify the extraction of content """
@@ -1180,6 +1230,9 @@ Devuelve exclusivamente el objeto JSON final corregido, respetando exactamente l
         """
         self.initial_time = time.time()
         self.current_task_id = task.id
+        
+        # Saving orignal text becasuse it will be modified later
+        original_text = task.input_text
 
         # Prepare the strict-mode schema (adds missing `required` lists and
         # additionalProperties: false throughout the schema tree)
@@ -1232,19 +1285,43 @@ Devuelve exclusivamente el objeto JSON final corregido, respetando exactamente l
 
         # ── Path 2: full-schema extraction with anti-hallucination prompt ──
         prompt = task.get_input_prompt()  # instruction + schema JSON + source text
+
+        result_list = []
+        
         result = self._call_llm(
             model,
             prompt,
             strict_schema,
             system=(
-                SYSTEM_PROMPT_EXTRACTION
+                SYSTEM_PROMPT_EXTRACTION                
             ),
         )
 
-        if self._time_left(reserve=17) > 0:
-            result = self._verification_pass(model, result, strict_schema,
-                                             task.input_text, task.instruction)
+        result_list.append(result)
 
+        
+        for i in range(NUM_REPETIONS_EXTRACTION):
+        
+            if self._time_left(reserve=30) > 0:
+                print ("Another attempt")
+            
+                result = self._call_llm(
+                    model,
+                    prompt,
+                    strict_schema,
+                    system=(
+                        SYSTEM_PROMPT_EXTRACTION                
+                    ),
+                )
+                result_list.append(result)
+
+            else:
+                break
+        
+        if self._time_left(reserve=17) > 0:
+            # Using original text in validation
+            result = self._verification_pass(model, result_list, strict_schema,
+                                             original_text, task.instruction)
         # Post-process: fix enum case mismatches without an extra LLM call
         # (e.g. model returns "positive" but schema requires "POSITIVE")
         for field_name, _ in sub_schemas:
