@@ -56,7 +56,7 @@ src/gensie/agents/
     └── strategies/
         ├── Strategy.py          — Abstract base class (StrategyV2)
         ├── Direct.py            — Simple scalar fields (string, int, bool)
-        ├── Categorial.py        — Enum fields defined via $ref
+        ├── Categorical.py        — Enum fields defined via $ref
         ├── FixedEntities.py     — Arrays of $ref-typed objects
         ├── SoftEntities.py      — Arrays of plain strings
         └── Complex.py           — Nested object arrays (hardest case)
@@ -125,7 +125,7 @@ The same module also renders schema fragments as TypeScript-like type strings (u
 
 **3. Strategies — `strategies/`**
 
-- **Direct / Categorial**: single LLM call with the field schema rendered as a TypeScript type. Falls back to `direct_call` if the response cannot be parsed.
+- **Direct / Categorical**: single LLM call with the field schema rendered as a TypeScript type. Falls back to `direct_call` if the response cannot be parsed.
 - **FixedEntities / SoftEntities**: same as Direct with a slightly higher temperature.
 - **Complex**: a two-step approach — first a *candidates* call extracts a free-text list of likely values from the source text; then a second call uses those hints as additional context for the structured extraction.
 
