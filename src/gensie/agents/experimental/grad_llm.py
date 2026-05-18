@@ -30,6 +30,8 @@ class GradLLM:
         self.client = client
         self.model = model
         self.prompts = get_prompts()
+        self.reasoning_effort = None  # set to "low"/"medium"/"high" to enable thinking
+        self.timeout = None           # seconds; None = client default (~10 min)
 
 
 
@@ -106,11 +108,8 @@ class GradLLM:
             # max_tokens=max_tokens,
             temperature=temperature,
             seed=seed,
-            reasoning_effort= None,
+            reasoning_effort=self.reasoning_effort,
             max_tokens=2000,
-            # extra_body={
-            #     "num_ctx": num_ctx
-            # },
             response_format=None if not use_schema else {"type": "json_object"} if not force_schema else force_schema
         )
         #print("Token usage:", response.usage)

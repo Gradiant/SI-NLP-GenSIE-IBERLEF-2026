@@ -1,5 +1,5 @@
 
-from gensie.agents.experimental.strategies.Categorial import Categorial
+from gensie.agents.experimental.strategies.Categorical import Categorical
 from gensie.agents.experimental.strategies.Complex import Complex
 from gensie.agents.experimental.strategies.Direct import Direct
 from gensie.agents.experimental.strategies.FixedEntities import FixedEntities
@@ -9,7 +9,7 @@ from .categorizer import classify_types, get_types
 
 strategies ={
     "direct": Direct,
-    "categorical": Categorial,
+    "categorical": Categorical,
     "fixed_entities": FixedEntities,
     "soft_entities": SoftEntities,
     "complex": Complex,
