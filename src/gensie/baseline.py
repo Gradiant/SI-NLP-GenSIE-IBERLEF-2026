@@ -8,6 +8,7 @@ from gensie.task import Task
 from dotenv import load_dotenv
 from logging import getLogger
 from gensie.agents.experimental_agent import ExperimentalAgent
+from gensie.agents.experimental_agent_v2 import ExperimentalAgentV2
 from gensie.agents.stable_agent import StableAgent
 load_dotenv()
 logger = getLogger("gensie")
@@ -77,6 +78,7 @@ class OfficialParticipant(Participant):
             "baseline": BasicAgent(),
             "stable": StableAgent(),
             "experimental": ExperimentalAgent(),
+            "limited": ExperimentalAgentV2(),
         }
 
     def get_info(self) -> ParticipantInfo:
@@ -100,15 +102,19 @@ class OfficialParticipant(Participant):
 
                 ),
                 PipelineInfo(
+                    name="limited",
+                    description="Like experimental but enables reasoning_effort='low' for each strategy step when more than 40 s remain in the 60-second budget, falling back to no thinking once time is tight.",
+                ),
+                PipelineInfo(
                     name="experimental",
                     description="""
 This is a experimental pipeline that plans and executes strategies based on categorization.
 
-- The categorization is done taking into account the field types and clasify the fields in next categories: direct, categorial, soft_entities, fixed_entities and complex.
+- The categorization is done taking into account the field types and clasify the fields in next categories: direct, categorical, soft_entities, fixed_entities and complex.
 
 - The strategies are executed and also they have an estimated time to implement abetter planning in future implementations.
 
-- Direct and categorial categories use the same strategy: direct call to de llm.
+- Direct and categorical categories use the same strategy: direct call to de llm.
 
 - Soft entities and fixed entities use also the same strategy: a direct prompt with diferent prompt than the previous one.
 
