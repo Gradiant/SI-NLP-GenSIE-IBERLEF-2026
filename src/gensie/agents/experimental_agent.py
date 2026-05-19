@@ -5,7 +5,7 @@ from openai import OpenAI
 from gensie.agent import GenSIEAgent
 from gensie.task import Task
 
-from gensie.agents.experimental.planner import generate_plan
+from gensie.agents.experimental.planner import generate_plan, update_times
 from gensie.agents.experimental.grad_llm import GradLLM
 
 
@@ -38,7 +38,7 @@ class ExperimentalAgent(GenSIEAgent):
         self.llm.model = model
 
         # 1. generate plan
-        plan = generate_plan(task)
+        plan = generate_plan(task, self.MAX_TIME)
         #print("Time generating plan:", time.time() - self.initial_time)
 
         #print("Processing plan for: ", ",".join([f"{step.get('category')}({step.get('fields', [])})" for step in plan]))
@@ -48,15 +48,18 @@ class ExperimentalAgent(GenSIEAgent):
 
         for step in plan:
             #print("PROCESSING", step.get("category"), step.get("fields", []))
-            init = time.time()
             strategy = step.get("strategy", None)
             strategy.use_model(self.llm)
             result = strategy.execute(in_time=self.MAX_TIME - (time.time() - self.initial_time))
-            results.append(result)
-            #print(f"Step {step.get('category')}, Execution Time:", time.time() - init)
+            if isinstance(result, dict):
+                results.append(result)
+            elif isinstance(result, list):
+                if  len(step.get("fields", [])) == 1:
+                    results.append({step.get("fields")[0]: result[0]})
+            plan = update_times(plan, remaining_time=self.MAX_TIME - (time.time() - self.initial_time), task=task)
+            print(f"Step {step.get('category')}, Execution Time:", time.time() - self.initial_time)
 
         # 3. join results
-        init = time.time()
         final_result = {}
         for res in results:
             final_result.update(res)
