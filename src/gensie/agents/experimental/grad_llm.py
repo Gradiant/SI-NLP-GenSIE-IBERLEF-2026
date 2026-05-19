@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from math import e
 import os
 import re
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, Tuple
 
 import yaml
 
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 from gensie.agents.utils import _normalize_schema_for_strict
 
 from .utils import _get_field_descriptions
-
+from time import time
 
 def get_prompts():
     "read yaml file in same folder"
@@ -35,7 +36,8 @@ class GradLLM:
 
 
 
-    def direct_call(self, task: Task, seed=42, temperature=0.7, use_schema=False, use_strict_schema=False, system_name = "direct_system", user_prompt = None) -> Dict[str, Any]:
+    def direct_call(self, task: Task, seed=42, temperature=0.7, use_schema=False, use_strict_schema=False,
+                    system_name = "direct_system", user_prompt = None, return_usage = False, reasoning_effort=None) -> Dict[str, Any]:
         """ Simply call with the prompt in the task and its descriptions"""
 
         direct_system = self.prompts.get(system_name, "You are a powerful QA agent.")
@@ -55,12 +57,15 @@ class GradLLM:
             force_schema=strict_schema,
             seed=seed,
             temperature=temperature,
+            return_usage=return_usage,
+            reasoning_effort=reasoning_effort
         )
+
         return result
 
 
 
-    def get_candidates(self, task, plain_schema, input_text):
+    def get_candidates(self, task, plain_schema, input_text, return_usage=False,reasoning_effort=None):
 
         task_description = task.target_schema.get("description", "").split("Complexity")[0].strip()
         hints_system = self.prompts.get("candidates_system", "").format(
@@ -76,6 +81,8 @@ class GradLLM:
             user_prompt=hints_user,
             system_prompt=hints_system,
             temperature=0.9,
+            return_usage=return_usage,
+            reasoning_effort=reasoning_effort
         )
         #print("Candidates",candidates)
         return candidates
@@ -90,7 +97,9 @@ class GradLLM:
         temperature=0.7,
         max_tokens=4000,
         num_ctx=4096,
-    ) -> Dict[str, Any]:
+        return_usage=False,
+        reasoning_effort=None
+    ) -> Dict[str, Any]|Tuple[Dict[str, Any], int, float]:
         """
         Example LLM call method that demonstrates how to use self.client to make
         a call to the LLM and handle the response. This is a placeholder and
@@ -99,20 +108,45 @@ class GradLLM:
         """
 
         # # Make the API call to the LLM
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            # max_tokens=max_tokens,
-            temperature=temperature,
-            seed=seed,
-            reasoning_effort=self.reasoning_effort,
-            max_tokens=2000,
-            response_format=None if not use_schema else {"type": "json_object"} if not force_schema else force_schema
-        )
+        start_time = time()
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                # max_tokens=max_tokens,
+                temperature=temperature,
+                seed=seed,
+                reasoning_effort=self.reasoning_effort if not reasoning_effort else reasoning_effort,
+                max_tokens=2000,
+                response_format=None if not use_schema else {"type": "json_object"} if not force_schema else force_schema
+            )
+        except Exception as e:
+            try:
+                start_time = time()
+                # Retry once on failure
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=temperature,
+                    seed=seed,
+                    max_tokens=2000,
+                    response_format=None if not use_schema else {"type": "json_object"} if not force_schema else force_schema
+                )
+
+            except Exception as e2:
+                print(f"LLM call failed after retry: {e2}")
+                raise e2
+        exe_time = time() - start_time
         #print("Token usage:", response.usage)
+        if return_usage:
+            total_tokens = response.usage.total_tokens if response.usage else None
+
         # Placeholder response parsing — replace with actual parsing logic
         try:
             content = response.choices[0].message.content
@@ -122,14 +156,14 @@ class GradLLM:
                 stripped = re.sub(r'\s*```$', '', stripped)
                 content = stripped
             result = json.loads(content)
-            return result
+            return result if not return_usage else (result, total_tokens, exe_time)
         except (KeyError, json.JSONDecodeError):
             # Handle parsing errors gracefully
             if response.choices and response.choices[0].message:
                 content = response.choices[0].message.content
                 if isinstance(content, str):
                     if use_schema is False:
-                        return content
+                        return content if not return_usage else (content, total_tokens, exe_time)
                     # Try to extract a JSON object/array embedded in free text
                     for pattern in (r'\{.*\}', r'\[.*\]'):
                         m = re.search(pattern, content, re.DOTALL)
@@ -139,5 +173,5 @@ class GradLLM:
                             except json.JSONDecodeError:
                                 pass
                     #print(f"Warning: call_llm could not parse JSON. Content preview: {content[:200]}")
-            return {}
+            return {} if not return_usage else ({}, total_tokens, exe_time)
 

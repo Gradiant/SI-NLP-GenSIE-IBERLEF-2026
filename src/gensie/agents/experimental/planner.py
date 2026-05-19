@@ -6,6 +6,7 @@ from gensie.agents.experimental.strategies.FixedEntities import FixedEntities
 from gensie.agents.experimental.strategies.SoftEntities import SoftEntities
 
 from .categorizer import classify_types, get_types
+from statistics import mean
 
 strategies ={
     "direct": Direct,
@@ -14,8 +15,20 @@ strategies ={
     "soft_entities": SoftEntities,
     "complex": Complex,
 }
+def update_times(plan:list, remaining_time:float, task):
+    token_per_second = mean([sum(step["strategy"].tokens)/sum(step["strategy"].times) for step in plan if step.get("strategy") and step["strategy"].tokens and step["strategy"].times])
 
-def generate_plan(task):
+    remaining_strategies = [step for step in plan if step.get("strategy") and step["strategy"].exe_time == 0]
+
+    time_per_strategy = remaining_time / len(remaining_strategies) if remaining_strategies else 0
+
+    for step in plan:
+        if step in remaining_strategies:
+            step["strategy"].max_time = time_per_strategy
+            step["strategy"].estimate(task, step["fields"], token_per_second=token_per_second)
+    return plan
+
+def generate_plan(task, max_time = 60):
     schema = task.target_schema
     # #print("Required fields:", schema.get("required", []))
     fields_by_cat = {}
@@ -31,6 +44,7 @@ def generate_plan(task):
         fields_are_required = any(f in schema.get("required", []) for f in fields)
         strategy = strategies.get(cat, Direct)(llm=None)
         strategy.estimate(task, fields)
+        strategy.max_time = max_time/len(fields_by_cat)  # Initial max_time allocation
 
         plan.append({
             "category": cat,
