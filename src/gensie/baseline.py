@@ -10,6 +10,7 @@ from logging import getLogger
 from gensie.agents.experimental_agent import ExperimentalAgent
 from gensie.agents.experimental_agent_v2 import ExperimentalAgentV2
 from gensie.agents.stable_agent import StableAgent
+from gensie.agents.experimental_baseline_agent import ExperimentalBaselineAgent
 load_dotenv()
 logger = getLogger("gensie")
 
@@ -77,7 +78,7 @@ class OfficialParticipant(Participant):
         self.pipelines = {
             "baseline": BasicAgent(),
             "stable": StableAgent(),
-            "experimental": ExperimentalAgent(),
+            "experimental": ExperimentalBaselineAgent(),
             "limited": ExperimentalAgentV2(),
         }
 
