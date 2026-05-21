@@ -115,13 +115,9 @@ This is a experimental pipeline that plans and executes strategies based on cate
 
 - The strategies are executed and also they have an estimated time to implement abetter planning in future implementations.
 
-- Direct and categorical categories use the same strategy: direct call to de llm.
+- For now, all strategies follows the same method to infer the answer, but only focusing on the specific fields for that category.
 
-- Soft entities and fixed entities use also the same strategy: a direct prompt with diferent prompt than the previous one.
-
-- Complex category use a two step strategy: first get candidates for the fields and then make a direct call with the candidates as hints.
-
-- Finally each result is merged in a final result that is returned as output.
+- Finally each result is merged to the baseline solution to obtain the final answer.
 
 """,
                 ),
