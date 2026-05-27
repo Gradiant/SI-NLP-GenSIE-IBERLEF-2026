@@ -1,5 +1,6 @@
 import os
 import time
+import traceback
 from typing import Any, Dict
 from openai import OpenAI
 from gensie.agent import GenSIEAgent
@@ -80,13 +81,22 @@ class ExperimentalBaselineAgent(GenSIEAgent):
                 print(f"Skipping {step.get('category')} due to time constraints. Estimated: {strategy.estimated_time}, Remaining: {self.MAX_TIME - (time.time() - self.initial_time)}")
                 break
 
-            result = strategy.execute()
+            try:
+                result = strategy.execute()
+            except Exception as exc:
+                print(f"[ERROR] strategy {step.get('category')} raised: {exc}")
+                traceback.print_exc()
+                raise
             if isinstance(result, dict):
                 results.append(result)
             elif isinstance(result, list):
                 if  len(step.get("fields", [])) == 1:
                     results.append({step.get("fields")[0]: result[0]})
-            self.plan = update_times(self.plan, remaining_time=self.MAX_TIME - (time.time() - self.initial_time), task=task)
+            try:
+                self.plan = update_times(self.plan, remaining_time=self.MAX_TIME - (time.time() - self.initial_time), task=task)
+            except Exception as exc:
+                print(f"[ERROR] update_times raised: {exc}")
+                traceback.print_exc()
             print(f"Step {step.get('category')}, Execution Time:", init - self.initial_time)
 
             if time.time() - self.initial_time > self.MAX_TIME-10:
