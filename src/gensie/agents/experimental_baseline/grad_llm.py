@@ -107,6 +107,23 @@ class GradLLM:
         and parse responses according to the task requirements.
         """
 
+        # Build response_format: always json_schema when schema
+        # is available, other "text" (never None, never "json_object")
+        if force_schema:
+            # force_schema may be a raw JSON Schema dict wrap it the same way stable does
+            if isinstance(force_schema, dict) and force_schema.get("type") != "json_schema":
+                response_format = {
+                    "type": "json_schema",
+                    "json_schema": {"name": "extraction", "schema": force_schema, "strict": True},
+                }
+            else:
+                response_format = force_schema  # already wrapped
+        else:
+            # No schema provided -> use text; prompts already ask for JSON
+            response_format = {"type": "text"}
+
+        effective_reasoning = (self.reasoning_effort if reasoning_effort is None else reasoning_effort)
+
         # # Make the API call to the LLM
         start_time = time()
         try:
@@ -116,17 +133,16 @@ class GradLLM:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                # max_tokens=max_tokens,
                 temperature=temperature,
                 seed=seed,
-                reasoning_effort=self.reasoning_effort if not reasoning_effort else reasoning_effort,
                 max_tokens=2000,
-                response_format=None if not use_schema else {"type": "json_object"} if not force_schema else force_schema
+                response_format=response_format,
+                reasoning_effort=effective_reasoning,   # always explicit, even when None
             )
         except Exception as e:
             try:
                 start_time = time()
-                # Retry once on failure
+                # Retry with reasoning_effort=None in case the server doesn't support it
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
@@ -136,9 +152,9 @@ class GradLLM:
                     temperature=temperature,
                     seed=seed,
                     max_tokens=2000,
-                    response_format=None if not use_schema else {"type": "json_object"} if not force_schema else force_schema
+                    response_format=response_format,
+                    reasoning_effort=None,
                 )
-
             except Exception as e2:
                 print(f"LLM call failed after retry: {e2}")
                 raise e2
@@ -169,7 +185,8 @@ class GradLLM:
                         m = re.search(pattern, content, re.DOTALL)
                         if m:
                             try:
-                                return json.loads(m.group())
+                                parsed = json.loads(m.group())
+                                return parsed if not return_usage else (parsed, total_tokens, exe_time)
                             except json.JSONDecodeError:
                                 pass
                     #print(f"Warning: call_llm could not parse JSON. Content preview: {content[:200]}")
