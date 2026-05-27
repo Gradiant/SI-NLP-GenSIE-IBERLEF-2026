@@ -76,7 +76,6 @@ class OfficialParticipant(Participant):
     def __init__(self):
         # Default pipeline using the reference BasicAgent
         self.pipelines = {
-            "baseline": BasicAgent(),
             "stable": StableAgent(),
             "experimental": ExperimentalBaselineAgent(),
             "limited": ExperimentalAgentV2(),
@@ -87,10 +86,6 @@ class OfficialParticipant(Participant):
             team_name="Gradiant NLP Team",
             institution="Gradiant",
             pipelines=[
-                PipelineInfo(
-                    name="baseline",
-                    description="Standard OpenAI agent using structured outputs.",
-                ),
                 PipelineInfo(
                     name="stable",
                     description="""
@@ -127,5 +122,5 @@ This is a experimental pipeline that plans and executes strategies based on cate
     def get_agent(self, pipeline_name: str) -> GenSIEAgent:
         if pipeline_name not in self.pipelines:
             # Fallback to default if pipeline not found, or raise error
-            return self.pipelines["baseline"]
+            return self.pipelines["stable"]
         return self.pipelines[pipeline_name]
