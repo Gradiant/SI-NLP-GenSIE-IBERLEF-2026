@@ -133,15 +133,40 @@ class GradLLM:
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
+
                     temperature=temperature,
                     seed=seed,
+                    reasoning_effort=None,
                     max_tokens=2000,
-                    response_format=None if not use_schema else {"type": "json_object"} if not force_schema else force_schema
+                    response_format={"type": "text"} if not use_schema else {"type": "json_object"} if not force_schema else force_schema
                 )
 
             except Exception as e2:
                 print(f"LLM call failed after retry: {e2}")
-                raise e2
+
+                try:
+
+                    # Final attempt with a very simple prompt to get at least some output
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        temperature=temperature,
+                        seed=seed,
+                        reasoning_effort=None,
+                        max_tokens=2000,
+                        response_format={
+                            "type": "json_schema",
+                            "json_schema": {"name": "extraction", "schema": force_schema, "strict": True}
+                        } if force_schema else {"type": "text"},
+                    )
+                except Exception as e3:
+                    print(f"LLM call failed after second retry: {e3}")
+                    print("Esquema:",force_schema)
+                    raise e3
+
         exe_time = time() - start_time
         #print("Token usage:", response.usage)
         if return_usage:
@@ -155,6 +180,8 @@ class GradLLM:
                 stripped = re.sub(r'^```(?:json)?\s*', '', content.strip())
                 stripped = re.sub(r'\s*```$', '', stripped)
                 content = stripped
+                content = content.split("</think>")[-1] if "</think>" in content else content
+
             result = json.loads(content)
             return result if not return_usage else (result, total_tokens, exe_time)
         except (KeyError, json.JSONDecodeError):
@@ -165,6 +192,7 @@ class GradLLM:
                     if use_schema is False:
                         return content if not return_usage else (content, total_tokens, exe_time)
                     # Try to extract a JSON object/array embedded in free text
+                    content = content.split("</think>")[-1] if "</think>" in content else content
                     for pattern in (r'\{.*\}', r'\[.*\]'):
                         m = re.search(pattern, content, re.DOTALL)
                         if m:

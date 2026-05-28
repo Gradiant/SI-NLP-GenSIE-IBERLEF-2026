@@ -1,9 +1,9 @@
 
-from gensie.agents.experimental.strategies.Categorical import Categorical
-from gensie.agents.experimental.strategies.Complex import Complex
-from gensie.agents.experimental.strategies.Direct import Direct
-from gensie.agents.experimental.strategies.FixedEntities import FixedEntities
-from gensie.agents.experimental.strategies.SoftEntities import SoftEntities
+from gensie.agents.experimental_baseline.strategies.Categorical import Categorical
+from gensie.agents.experimental_baseline.strategies.Complex import Complex
+from gensie.agents.experimental_baseline.strategies.Direct import Direct
+from gensie.agents.experimental_baseline.strategies.FixedEntities import FixedEntities
+from gensie.agents.experimental_baseline.strategies.SoftEntities import SoftEntities
 
 from .categorizer import classify_types, get_types
 from statistics import mean
