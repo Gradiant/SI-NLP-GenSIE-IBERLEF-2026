@@ -76,7 +76,7 @@ class OfficialParticipant(Participant):
     def __init__(self):
         # Default pipeline using the reference BasicAgent
         self.pipelines = {
-            "baseline": BasicAgent(),
+            # "baseline": BasicAgent(),
             "stable": StableAgent(),
             "experimental": ExperimentalBaselineAgent(),
             "limited": ExperimentalAgentV2(),
@@ -87,10 +87,10 @@ class OfficialParticipant(Participant):
             team_name="Gradiant NLP Team",
             institution="Gradiant",
             pipelines=[
-                PipelineInfo(
-                    name="baseline",
-                    description="Standard OpenAI agent using structured outputs.",
-                ),
+                # PipelineInfo(
+                #     name="baseline",
+                #     description="Standard OpenAI agent using structured outputs.",
+                # ),
                 PipelineInfo(
                     name="stable",
                     description="""
