@@ -79,5 +79,8 @@ class ExperimentalAgentV2(ExperimentalAgent):
 
         final_result = {}
         for res in results:
-            final_result.update(res)
+            if isinstance(res, dict):
+                final_result.update(res)
+            else:
+                print("Resultado no texto",res)
         return final_result
