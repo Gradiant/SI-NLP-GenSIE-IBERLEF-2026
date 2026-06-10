@@ -22,6 +22,9 @@ COPY . /app/gensie-lib
 # 4. Install the project in editable mode
 RUN uv pip install --system -e /app/gensie-lib
 
+# 5. Pre-download tiktoken encoding data (needed offline at runtime)
+RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
+
 # Expose the FastAPI port
 EXPOSE 8000
 
