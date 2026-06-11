@@ -1,11 +1,16 @@
 
 from abc import abstractmethod
 from typing import Any, Dict
-import tiktoken
+
 from ..grad_llm import GradLLM
 from ..utils import get_prompts
 from abc import ABC
+import os
+from pathlib import Path
 
+TIKTOKEN_PATH = Path(__file__).parent.parent.parent / "tiktoken_cache"
+os.environ["TIKTOKEN_CACHE_DIR"] = str(TIKTOKEN_PATH)
+import tiktoken
 ESTIMATOR = tiktoken.get_encoding("cl100k_base")  # compatible con la mayoría de modelos
 
 

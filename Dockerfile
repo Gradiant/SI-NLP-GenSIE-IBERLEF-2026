@@ -2,8 +2,8 @@
 FROM python:3.13-slim
 
 # Install uv for fast dependency management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
+# COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN pip install uv
 # Set the working directory
 WORKDIR /app
 
@@ -24,6 +24,9 @@ RUN uv pip install --system -e /app/gensie-lib
 
 # 5. Pre-download tiktoken encoding data (needed offline at runtime)
 RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
+
+# # 6. Download embedgins for evaluator
+# RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5')"
 
 # Expose the FastAPI port
 EXPOSE 8000
